@@ -1,12 +1,13 @@
 from django.db import models
+import datetime
 
 
 class Audit(models.Model):
     file = models.FileField(
         upload_to="data/", verbose_name="csv-файл", help_text="Загрузите csv-файл"
     )
-    # ToDo: кажется путь прописан неправильно
-    upload_date = models.DateTimeField(auto_now_add=True)
+    upload_date = models.DateTimeField(auto_now=True)
+    # ToDo: добавить поле user
 
     class Meta:
         verbose_name = "Аудит"
