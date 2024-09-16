@@ -187,29 +187,31 @@
     <section class="py-5 text-center container">
         <div class="row py-lg-5">
             <div class="col-lg-6 col-md-8 mx-auto">
-                <h1 class="fw-light">Продукты</h1>
-                <p class="lead text-body-secondary">Самое лучшее для здорового и качественного питания</p>
-                {% if user.is_authenticated %}
+                <h1 class="fw-light">Дипломный проект</h1>
+                <p class="lead text-body-secondary">Модель ценообразования</p>
+                {% if user.is_authenticated and user.profile_value == 'Дата инженер' %}
                 <p>
-                       role="button">Создать продукт</a>
+<!--                    здесь должна быть ссылка для перехода на страницу загрузки файла если пользователь дата инженер-->
+<!--                    а если аналитик то кнопка создания запроса-->
+                    <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Загрузить файл</a>
+                    <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Создать запрос</a>
+                {% elif user.is_authenticated and user.profile_value == 'Аналитик' %}
+                    <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Создать запрос</a>
                 </p>
                 {% endif %}
+                <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Создать запрос</a>
+<!--                ToDo: поменять пути в кнопках-->
             </div>
         </div>
     </section>
 
-    {% block content %}
-    {% endblock %}
 </main>
 
 <footer class="text-body-secondary py-5">
     <div class="container">
         <p class="float-end mb-1">
             <a href="#">Back to top</a>
-        </p>
-        <p class="mb-1">Album example is &copy; Bootstrap, but please download and customize it for yourself!</p>
-        <p class="mb-0">New to Bootstrap? <a href="/static">Visit the homepage</a> or read our <a
-                href="/docs/5.3/getting-started/introduction/">getting started guide</a>.</p>
+
     </div>
 </footer>
 <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>

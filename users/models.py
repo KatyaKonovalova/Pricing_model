@@ -3,7 +3,7 @@ from django.db import models
 
 
 class User(AbstractUser):
-    PROFILE_VALUE_CHOICES = [('Аналитик', 'Analyst'), ('Дата инженер', 'Data engineer')]
+    PROFILE_VALUE_CHOICES = [('Analyst', 'Аналитик'), ('Data engineer', 'Дата инженер')]
     username = None
     email = models.EmailField(unique=True, verbose_name="Email")
     profile_value = models.CharField(max_length=50,
