@@ -191,19 +191,22 @@
                 <p class="lead text-body-secondary">Модель ценообразования</p>
                 {% if user.is_authenticated and user.profile_value == 'Дата инженер' %}
                 <p>
-<!--                    здесь должна быть ссылка для перехода на страницу загрузки файла если пользователь дата инженер-->
-<!--                    а если аналитик то кнопка создания запроса-->
+                    <!--                    здесь должна быть ссылка для перехода на страницу загрузки файла если пользователь дата инженер-->
+                    <!--                    а если аналитик то кнопка создания запроса-->
                     <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Загрузить файл</a>
                     <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Создать запрос</a>
-                {% elif user.is_authenticated and user.profile_value == 'Аналитик' %}
+                    {% elif user.is_authenticated and user.profile_value == 'Аналитик' %}
                     <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Создать запрос</a>
                 </p>
                 {% endif %}
                 <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Создать запрос</a>
-<!--                ToDo: поменять пути в кнопках-->
+                <!--                ToDo: поменять пути в кнопках-->
             </div>
         </div>
     </section>
+
+    {% block content %}
+    {% endblock %}
 
 </main>
 
