@@ -1,6 +1,9 @@
 from django.urls import path
 from . import views
+from .apps import AuditConfig
+
+app_name = AuditConfig.name
 
 urlpatterns = [
-    path('', views.index, name='index')
+    path('', views.home, name='home')
 ]

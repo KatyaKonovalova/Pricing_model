@@ -4,7 +4,7 @@ from django.db import models
 
 class User(AbstractUser):
     PROFILE_VALUE_CHOICES = [('Аналитик', 'Analyst'), ('Дата инженер', 'Data engineer')]
-    username = models.CharField()
+    username = None
     email = models.EmailField(unique=True, verbose_name="Email")
     profile_value = models.CharField(max_length=50,
                                      choices=PROFILE_VALUE_CHOICES,
@@ -12,7 +12,7 @@ class User(AbstractUser):
                                      verbose_name="Кем вы являетесь",)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ['username', ]
+    REQUIRED_FIELDS = []
 
     class Meta:
         verbose_name = "Пользователь"
