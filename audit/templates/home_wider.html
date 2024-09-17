@@ -189,33 +189,24 @@
             <div class="col-lg-6 col-md-8 mx-auto">
                 <h1 class="fw-light">Дипломный проект</h1>
                 <p class="lead text-body-secondary">Модель ценообразования</p>
+                <!--                {% if user.is_authenticated %}-->
+                <!--                <p>-->
+                <!--                    &lt;!&ndash;ToDo: Почему если оставить условие для кнопки Создать запрос, то второе условие не работает&ndash;&gt;-->
+                <!--                    <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Создать запрос</a>-->
+                <!--                    &lt;!&ndash;ToDo: Почему это условие работает, только если неписать на английском?&ndash;&gt;-->
+                <!--                    {% if user.profile_value == 'Data engineer' %}-->
+                <!--                    <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Загрузить файл</a>-->
+                <!--                    {% endif %}-->
+                <!--                </p>-->
+                <!--                {% endif %}-->
                 {% if user.is_authenticated %}
                 <p>
-                    <a class="btn btn-primary" data-bs-toggle="collapse" href="#multiCollapseExample1" role="button"
-                       aria-expanded="false" aria-controls="multiCollapseExample1">Создать запрос</a>
-                    {% if user.profile_value == 'Data engineer' %}
-                    <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#multiCollapseExample2" aria-expanded="false"
-                            aria-controls="multiCollapseExample2">Загрузить файл
-                    </button>
-                    {% endif %}
+                    <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseExample" role="button"
+                       aria-expanded="false" aria-controls="collapseExample">Создать запрос</a>
+                        {% if user.profile_value == 'Data engineer' %}
+                        <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Загрузить файл</a>
+                        {% endif %}
                 </p>
-                <div class="row">
-                    <div class="col">
-                        <div class="collapse multi-collapse" id="multiCollapseExample1">
-                            <div class="card card-body">
-                                Некоторый заполнитель для первого компонента
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="collapse multi-collapse" id="multiCollapseExample2">
-                            <div class="card card-body">
-                                Некоторое содержимое заполнителя для второго компонента
-                            </div>
-                        </div>
-                    </div>
-                </div>
                 {% endif %}
                 <!--ToDo: поменять пути в кнопках-->
             </div>

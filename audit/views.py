@@ -19,7 +19,7 @@ def home(request):
         "home.html",
     )
 
-
+# ToDo: Настроить присвоение пользователя загруженному файлу. С этим кодом вылезает ошибка. Видео 22.2
 # class AuditCreateView(CreateView):
 #     model = Audit
 #     form_class = AuditForm
