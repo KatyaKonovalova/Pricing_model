@@ -3,13 +3,18 @@ from django.db import models
 
 
 class User(AbstractUser):
-    PROFILE_VALUE_CHOICES = [('Analyst', 'Аналитик'), ('Data engineer', 'Дата инженер')]
+    PROFILE_VALUE_CHOICES = [("Analyst", "Аналитик"), ("Data engineer", "Дата инженер")]
     username = None
     email = models.EmailField(unique=True, verbose_name="Email")
-    profile_value = models.CharField(max_length=50,
-                                     choices=PROFILE_VALUE_CHOICES,
-                                     default="Analyst",
-                                     verbose_name="Кем вы являетесь",)
+    profile_value = models.CharField(
+        max_length=50,
+        choices=PROFILE_VALUE_CHOICES,
+        default="Analyst",
+        verbose_name="Кем вы являетесь",
+    )
+    token = models.CharField(
+        max_length=100, verbose_name="Token", blank=True, null=True
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

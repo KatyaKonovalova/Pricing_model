@@ -189,6 +189,7 @@
             <div class="col-lg-6 col-md-8 mx-auto">
                 <h1 class="fw-light">Дипломный проект</h1>
                 <p class="lead text-body-secondary">Модель ценообразования</p>
+                {% if user.is_authenticated %}
                 <p>
                     <!--ToDo: Почему если оставить условие для кнопки Создать запрос, то второе условие не работает-->
                     <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Создать запрос</a>
@@ -197,6 +198,7 @@
                     <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Загрузить файл</a>
                     {% endif %}
                 </p>
+                {% endif %}
                 <!--ToDo: поменять пути в кнопках-->
             </div>
         </div>

@@ -4,6 +4,4 @@ from .apps import AuditConfig
 
 app_name = AuditConfig.name
 
-urlpatterns = [
-    path('', views.home, name='home')
-]
+urlpatterns = [path("", views.home, name="home")]
