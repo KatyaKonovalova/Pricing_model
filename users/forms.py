@@ -1,5 +1,4 @@
 from django.contrib.auth.forms import UserCreationForm
-from django.forms import BooleanField
 
 from audit.forms import StyleFormMixin
 from users.models import User

@@ -1,3 +1,4 @@
+from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
@@ -19,6 +20,7 @@ def home(request):
         "home.html",
     )
 
+
 # ToDo: Настроить присвоение пользователя загруженному файлу. С этим кодом вылезает ошибка. Видео 22.2
 # class AuditCreateView(CreateView):
 #     model = Audit
@@ -31,3 +33,17 @@ def home(request):
 #         audit.save()
 #         audit.user.save()
 #         return redirect("audit:home", audit.pk)
+
+def upload_file(request):
+    if request.method == 'POST':
+        form = AuditForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('success')  # Замените 'success_url' на имя вашего успешного URL
+    else:
+        form = AuditForm()
+    return render(request, 'home.html', {'form': form})
+
+def upload_success(request):
+    return render(request, 'success.html')
+

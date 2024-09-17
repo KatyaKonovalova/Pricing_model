@@ -192,11 +192,14 @@
                 {% if user.is_authenticated %}
                 <p>
                     <a class="btn btn-primary" data-bs-toggle="collapse" href="#multiCollapseExample1" role="button"
-                       aria-expanded="false" aria-controls="multiCollapseExample1">Создать запрос</a>
+                       aria-expanded="false" aria-controls="multiCollapseExample1">
+                        Создать запрос
+                    </a>
                     {% if user.profile_value == 'Data engineer' %}
                     <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
                             data-bs-target="#multiCollapseExample2" aria-expanded="false"
-                            aria-controls="multiCollapseExample2">Загрузить файл
+                            aria-controls="multiCollapseExample2">
+                        Загрузить файл
                     </button>
                     {% endif %}
                 </p>
@@ -211,7 +214,7 @@
                     <div class="col">
                         <div class="collapse multi-collapse" id="multiCollapseExample2">
                             <div class="card card-body">
-                                Некоторое содержимое заполнителя для второго компонента
+                                {% include 'audit/includes/file_csv.html' %}
                             </div>
                         </div>
                     </div>
