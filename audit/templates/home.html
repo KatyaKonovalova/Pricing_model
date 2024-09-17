@@ -189,18 +189,15 @@
             <div class="col-lg-6 col-md-8 mx-auto">
                 <h1 class="fw-light">Дипломный проект</h1>
                 <p class="lead text-body-secondary">Модель ценообразования</p>
-                {% if user.is_authenticated and user.profile_value == 'Дата инженер' %}
                 <p>
-                    <!--                    здесь должна быть ссылка для перехода на страницу загрузки файла если пользователь дата инженер-->
-                    <!--                    а если аналитик то кнопка создания запроса-->
+                    <!--ToDo: Почему если оставить условие для кнопки Создать запрос, то второе условие не работает-->
+                    <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Создать запрос</a>
+                    <!--ToDo: Почему это условие работает, только если неписать на английском?-->
+                    {% if user.profile_value == 'Data engineer' %}
                     <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Загрузить файл</a>
-                    <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Создать запрос</a>
-                    {% elif user.is_authenticated and user.profile_value == 'Аналитик' %}
-                    <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Создать запрос</a>
+                    {% endif %}
                 </p>
-                {% endif %}
-                <a class="btn btn-primary" href="{% url 'audit:home' %}" role="button">Создать запрос</a>
-                <!--                ToDo: поменять пути в кнопках-->
+                <!--ToDo: поменять пути в кнопках-->
             </div>
         </div>
     </section>
