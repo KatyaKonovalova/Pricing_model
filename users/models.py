@@ -8,7 +8,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, verbose_name="Email")
     profile_value = models.CharField(max_length=50,
                                      choices=PROFILE_VALUE_CHOICES,
-                                     default="Аналитик",
+                                     default="Analyst",
                                      verbose_name="Кем вы являетесь",)
 
     USERNAME_FIELD = "email"
