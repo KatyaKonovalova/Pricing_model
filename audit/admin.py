@@ -1,11 +1,19 @@
 from django.contrib import admin
 
 from .models import Audit
+from .forms import AuditForm
 
-
-# admin.site.register(Audit) - тоже самое, что и @admin.register(Audit)
 @admin.register(Audit)
-class AuditAdmin(admin.ModelAdmin):
-    list_display = ("id", "file", "upload_date", "user")  # ToDo: добавить 'user'
-    list_filter = ("upload_date",)
-    search_fields = ("file", "upload_date", "user")
+class Audit(admin.ModelAdmin):
+    form = AuditForm  # Используем кастомную форму для админки
+
+    # Отключаем остальные поля, если необходимо
+    def save_model(self, request, obj, form, change):
+        # Сохраняем только файл, не изменяя другие данные
+        if form.is_valid():
+            obj.file_field = form.cleaned_data['file']  # Сохраняем только файл
+            obj.save()
+
+
+
+
