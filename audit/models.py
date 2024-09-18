@@ -16,9 +16,10 @@ class Audit(models.Model):
         blank=True,
     )
 
-    # ToDo: добавить поле user
-
     class Meta:
         verbose_name = "Аудит"
         verbose_name_plural = "Аудиты"
         ordering = ["file", "upload_date"]
+
+    def __str__(self):
+        return self.file.name

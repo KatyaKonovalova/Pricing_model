@@ -191,23 +191,29 @@
                 <p class="lead text-body-secondary">Модель ценообразования</p>
                 {% if user.is_authenticated %}
                 <p>
-                    <a class="btn btn-primary" data-bs-toggle="collapse" href="#multiCollapseExample1" role="button"
-                       aria-expanded="false" aria-controls="multiCollapseExample1">
-                        Создать запрос
-                    </a>
-                    {% if user.profile_value == 'Data engineer' %}
-                    <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#multiCollapseExample2" aria-expanded="false"
-                            aria-controls="multiCollapseExample2">
-                        Загрузить файл
-                    </button>
+                <a class="btn btn-primary" data-bs-toggle="collapse" href="#multiCollapseExample1" role="button"
+                   aria-expanded="false" aria-controls="multiCollapseExample1">
+                    Создать запрос
+                </a>
+                {% if user.profile_value == 'Data engineer' %}
+                <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#multiCollapseExample2" aria-expanded="false"
+                        aria-controls="multiCollapseExample2">
+                    Загрузить файл
+                </button>
+                    {% if success %}
+                        <p style="color: green;">{{ success }}</p>
+                    {% elif error %}
+                        <p style="color: red;">{{ error }}</p>
                     {% endif %}
+                {% endif %}
+<!--                ToDo: Все же правильно закрыто-->
                 </p>
                 <div class="row">
                     <div class="col">
                         <div class="collapse multi-collapse" id="multiCollapseExample1">
                             <div class="card card-body">
-                                Некоторый заполнитель для первого компонента
+                                {% include 'audit/includes/make_request.html' %}
                             </div>
                         </div>
                     </div>

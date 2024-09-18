@@ -1,5 +1,4 @@
 from django.forms import BooleanField, ModelForm
-from django import forms
 from audit.models import Audit
 
 
@@ -17,4 +16,3 @@ class AuditForm(StyleFormMixin, ModelForm):
     class Meta:
         model = Audit
         fields = ['file']
-
