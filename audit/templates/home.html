@@ -201,11 +201,7 @@
                         aria-controls="multiCollapseExample2">
                     Загрузить файл
                 </button>
-                    {% if success %}
-                        <p style="color: green;">{{ success }}</p>
-                    {% elif error %}
-                         <p style="color: red;">{{ error }}</p>
-                    {% endif %}
+                    {% include 'audit/includes/file_message.html' %}
                 {% endif %}
 <!--                ToDo: Все же правильно закрыто-->
                 </p>

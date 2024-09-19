@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from django.contrib.messages import constants as messages
+
 
 load_dotenv()
 
@@ -120,3 +122,11 @@ if CACHE_ENABLE:
             "LOCATION": os.getenv("LOCATION"),
         }
     }
+
+MESSAGE_TAGS = {
+    messages.DEBUG: 'debug',
+    messages.INFO: 'info',
+    messages.SUCCESS: 'success',
+    messages.WARNING: 'warning',
+    messages.ERROR: 'danger',
+}
