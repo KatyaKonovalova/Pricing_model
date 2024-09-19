@@ -1,68 +1,65 @@
 import csv
 import os
-from django.contrib import messages
-
 from django.shortcuts import render, redirect
-from django.utils import timezone
 
 from config import settings
-from .forms import UploadFileForm
-from .models import Audit
-
-
-def handle_uploaded_file(file):
-    """
-    Обработчик файла: сохраняет данные из CSV в базу и удаляет файл после обработки.
-    """
-    file_path = os.path.join(settings.MEDIA_ROOT, file.name)
-
-    # Сохраняем файл временно на сервере
-    with open(file_path, 'wb+') as destination:
-        for chunk in file.chunks():
-            destination.write(chunk)
-
-    # Открываем файл и читаем его содержимое
-    with open(file_path, mode='r', encoding='utf-8') as csv_file:
-        csv_reader = csv.DictReader(csv_file)
-        for row in csv_reader:
-            # Создаем новые записи в базе данных
-            Audit.objects.create(
-                price=row['price'],
-                count=row['count'],
-                add_cost=row['add_cost'],
-                company=row['company'],
-                product=row['product'],
-                upload_date=timezone.now(),
-            )
-
-    # Удаляем файл после успешного чтения
-    if os.path.exists(file_path):
-        os.remove(file_path)
+from .forms import AuditForm
+from .models import Data
 
 
 def home(request):
-    if request.method == 'POST':
-        form = UploadFileForm(request.POST, request.FILES)
+    if request.method == "POST":
+        form = AuditForm(request.POST, request.FILES)
         if form.is_valid():
-            handle_uploaded_file(request.FILES['file'])
-            return render(request, 'home.html', {'form': UploadFileForm(), 'success': 'Файл успешно загружен!'})
+            # uploaded_file = request.FILES['file']
+            # file_path = os.path.join(settings.MEDIA_ROOT, uploaded_file.name)
+
+            audit_instance = form.save(commit=False)  # Не сохраняем пока в базу
+            audit_instance.user = request.user  # Присваиваем пользователя
+            audit_instance.save()  # Теперь сохраняем
+            uploaded_file = audit_instance.file.path  # Получаем путь к файлу
+
+
+            # with open(file_path, 'wb+') as destination:
+            #     for chunk in uploaded_file.chunks():
+            #         destination.write(chunk)
+
+            # Обработка файла (например, если это CSV)
+            with open(uploaded_file, newline="", encoding="utf-8") as csvfile:
+                reader = csv.reader(csvfile)
+                # Пропускаем первую строку (если она заголовок)
+                next(reader, None)
+                for row in reader:
+                    try:
+                        # Извлечение данных согласно полям модели
+                        price = float(row[0])  # преобразование str в float
+                        count = int(row[1])
+                        add_cost = float(row[2])
+                        company = row[3]
+                        product = row[4]
+
+                        # Создание экземпляра модели
+                        Data.objects.create(
+                            price=price,
+                            count=count,
+                            add_cost=add_cost,
+                            company=company,
+                            product=product,
+                            user=request.user,
+                        )
+                    except (ValueError, IndexError) as e:
+                        print(f"Ошибка при обработке строки: {row} - {e}")
+                    except Exception as e:
+                        print(f"Ошибка при сохранении в БД: {e}")
+                        continue
+
+            # Удаляем файл после обработки
+            os.remove(uploaded_file)
+
+            return redirect("audit:home")
         else:
-            return render(request, 'home.html', {'form': form, 'error': 'Ошибка при загрузке файла!'})
-
+            print(form.errors)
     else:
-        form = UploadFileForm()
+        form = AuditForm()
 
-    return render(request, 'home.html', {'form': form})
-
-# def home(request):
-#     if request.method == 'POST':
-#         form = AuditForm(request.POST, request.FILES)
-#         if form.is_valid():
-#             form.save()  # Сохраняем файл в базу данных и на диск
-#             return render(request, 'home.html', {'form': AuditForm(), 'success': 'Файл успешно загружен!'})
-#         else:
-#             return render(request, 'home.html', {'form': form, 'error': 'Ошибка при загрузке файла!'})
-#
-#     # Для GET-запроса отображаем пустую форму
-#     form = AuditForm()
-#     return render(request, 'home.html', {'form': form})
+    return render(request, "home.html", {"form": form})
