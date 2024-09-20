@@ -1,6 +1,10 @@
-<form action="/submit" method="POST">
-    <label for="name">Товар:</label>
-    <input type="text" id="name" name="name"><br><br>
-
-    <input type="submit" value="Submit">
+<form method="post" action="{% url 'audit:graph' %}">
+    {% csrf_token %}
+    <label for="product">Название товара:</label>
+    <input type="text" id="product" name="product" required>
+    <div class="card-body">
+        <button type="submit" class="btn btn-primary">
+            Построить модель
+        </button>
+    </div>
 </form>
