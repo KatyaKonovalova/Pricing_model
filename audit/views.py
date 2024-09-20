@@ -3,7 +3,9 @@ import csv
 import time
 import plotly.express as px
 import plotly.graph_objs as go
-
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
 
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
@@ -81,48 +83,80 @@ def home(request):
     return render(request, "home.html", {"form": form})
 
 
+
+def forecast_price(data_entries, forecast_days=10):
+    """
+    Прогнозирование цены продукта на основе данных из модели.
+
+    :param data_entries: queryset с данными модели Data.
+    :param forecast_days: количество дней для прогноза.
+    :return: x_values_extended, y_values_extended - массивы для построения графика.
+    """
+    # Извлекаем даты и цены из записей
+    x_values = [entry.upload_date for entry in data_entries]
+    y_values = [entry.price for entry in data_entries]
+
+    # Преобразуем даты в числовой формат для модели
+    x_values_numeric = pd.to_datetime(x_values).map(pd.Timestamp.timestamp).values.reshape(-1, 1)
+    y_values_numeric = np.array(y_values)
+
+    if len(x_values_numeric) > 1:
+        # Строим модель линейной регрессии
+        model = LinearRegression()
+        model.fit(x_values_numeric, y_values_numeric)
+
+        # Прогнозируем на несколько дней вперед
+        last_date = pd.to_datetime(x_values[-1])  # Последняя дата
+        future_dates = [last_date + pd.Timedelta(days=i) for i in range(1, forecast_days + 1)]
+
+        future_x_numeric = pd.to_datetime(future_dates).map(pd.Timestamp.timestamp).values.reshape(-1, 1)
+        future_y = model.predict(future_x_numeric)
+
+        # Объединяем исторические данные и прогноз
+        x_values_extended = np.append(x_values_numeric, future_x_numeric).reshape(-1)
+        y_values_extended = np.append(y_values_numeric, future_y)
+    else:
+        # Если данных недостаточно, используем только исторические данные
+        x_values_extended = x_values_numeric.reshape(-1)
+        y_values_extended = y_values_numeric
+
+    # Преобразуем числовые даты обратно в нормальные для графика
+    x_dates_extended = pd.to_datetime(x_values_extended, unit='s')
+
+    return x_dates_extended, y_values_extended
+
 def graph(request):
     if request.method == 'POST':
         product_name = request.POST.get('product')
+        x_axis = request.POST.get('x_axis', 'upload_date')
+        y_axis = request.POST.get('y_axis', 'price')
+        chart_type = request.POST.get('chart_type', 'scatter')  # Значение по умолчанию
+
+        # Получаем данные из базы данных
+        data_entries = Data.objects.filter(user=request.user)
 
         if product_name:
-            data_entries = Data.objects.filter(product=product_name, user=request.user)
+            data_entries = data_entries.filter(product=product_name)
 
-            # Пагинация
-            paginator = Paginator(data_entries, 10)  # 10 записей на страницу
+        # Прогнозируем цену
+        x_values_extended, y_values_extended = forecast_price(data_entries)
 
-            page_number = request.GET.get('page')  # Получаем номер страницы из запроса
-            try:
-                page_obj = paginator.page(page_number)
-            except PageNotAnInteger:
-                page_obj = paginator.page(1)  # Если номер страницы не целый, показываем первую страницу
-            except EmptyPage:
-                page_obj = paginator.page(paginator.num_pages)  # Если номер страницы слишком большой, показываем последнюю
+        # Построение графика
+        if chart_type == 'bar':
+            fig = go.Figure(data=[go.Bar(x=x_values_extended, y=y_values_extended)])
+        elif chart_type == 'scatter':
+            fig = go.Figure(data=[go.Scatter(x=x_values_extended, y=y_values_extended, mode='lines+markers')])
+        elif chart_type == 'line':
+            fig = go.Figure(data=[go.Scatter(x=x_values_extended, y=y_values_extended, mode='lines')])
+        else:
+            fig = go.Figure(data=[go.Scatter(x=x_values_extended, y=y_values_extended, mode='lines+markers')])
 
-            # Извлечение данных для графика
-            prices = [entry.price for entry in page_obj]
-            companies = [entry.company for entry in page_obj]
-            dates = [entry.upload_date for entry in page_obj]
+        fig.update_layout(title=f'Прогноз {y_axis} по {x_axis}', xaxis_title=x_axis, yaxis_title=y_axis)
+        graph_div = fig.to_html(full_html=False)
 
-            # Построение графиков
-            # График столбиков относительно компаний
-            bar_fig = go.Figure(data=[go.Bar(x=companies, y=prices)])
-            bar_fig.update_layout(title=f'График цен на {product_name} по компаниям', xaxis_title='Компания',
-                                  yaxis_title='Цена')
-            bar_plot_div = bar_fig.to_html(full_html=False)
+        return render(request, 'audit/graph.html', {
+            'graph': graph_div,
+            'product': product_name
+        })
 
-            # График Scatter относительно времени (дат)
-            scatter_fig = go.Figure(data=[go.Scatter(x=dates, y=prices, mode='lines+markers')])
-            scatter_fig.update_layout(title=f'График цен на {product_name} по времени', xaxis_title='Дата',
-                                      yaxis_title='Цена')
-            scatter_plot_div = scatter_fig.to_html(full_html=False)
-
-            # Передача графиков в шаблон
-            return render(request, 'audit/graph.html', {
-                'bar_plot': bar_plot_div,
-                'scatter_plot': scatter_plot_div,
-                'product': product_name,
-                'page_obj': page_obj
-            })
-
-        return render(request, 'audit/graph.html')
+    return render(request, 'audit/graph.html', {})

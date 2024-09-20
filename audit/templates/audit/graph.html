@@ -1,56 +1,92 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>График товара</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <title>Прогноз цен</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> <!-- Подключение Plotly для рендеринга графиков -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        form {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: bold;
+        }
+        input, select, button {
+            padding: 8px;
+            margin: 5px 0;
+        }
+        #graph {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #888;
+        }
+    </style>
 </head>
 <body>
-    <h1>График цен на товар</h1>
+    <h1>Прогноз ценообразования</h1>
 
-    {% if product %}
-        <h2>Графики для товара: {{ product }}</h2>
+    <!-- Форма для выбора параметров графика -->
+    <form method="POST">
+        {% csrf_token %}
 
-        {% if bar_plot %}
-            <div>
-                <h3>Столбчатый график по компаниям</h3>
-                <div>{{ bar_plot|safe }}</div>
-            </div>
-        {% endif %}
+        <!-- Выбор продукта -->
+        <label for="product">Продукт:</label>
+        <input type="text" id="product" name="product" value="{{ product }}" placeholder="Введите название продукта" required>
 
-        {% if scatter_plot %}
-            <div>
-                <h3>Scatter-график по времени</h3>
-                <div>{{ scatter_plot|safe }}</div>
-            </div>
-        {% endif %}
+        <!-- Выбор оси X -->
+        <label for="x_axis">Ось X:</label>
+        <select id="x_axis" name="x_axis">
+            <option value="upload_date" {% if x_axis == 'upload_date' %}selected{% endif %}>Дата загрузки</option>
+            <option value="count" {% if x_axis == 'count' %}selected{% endif %}>Количество</option>
+            <option value="add_cost" {% if x_axis == 'add_cost' %}selected{% endif %}>Доп. затраты</option>
+        </select>
 
-    {% elif error %}
-        <p>{{ error }}</p>
-    {% endif %}
+        <!-- Выбор оси Y -->
+        <label for="y_axis">Ось Y:</label>
+        <select id="y_axis" name="y_axis">
+            <option value="price" {% if y_axis == 'price' %}selected{% endif %}>Цена</option>
+            <option value="count" {% if y_axis == 'count' %}selected{% endif %}>Количество</option>
+            <option value="add_cost" {% if y_axis == 'add_cost' %}selected{% endif %}>Доп. затраты</option>
+        </select>
 
-    <!-- Пагинация -->
-    <div class="pagination">
-        <span class="step-links">
-            {% if page_obj.has_previous %}
-                <a href="?page=1">&laquo; Первая</a>
-                <a href="?page={{ page_obj.previous_page_number }}">Предыдущая</a>
-            {% endif %}
+        <!-- Выбор типа графика -->
+        <label for="chart_type">Тип графика:</label>
+        <select id="chart_type" name="chart_type">
+            <option value="scatter" {% if chart_type == 'scatter' %}selected{% endif %}>Точечный</option>
+            <option value="line" {% if chart_type == 'line' %}selected{% endif %}>Линейный</option>
+            <option value="bar" {% if chart_type == 'bar' %}selected{% endif %}>Столбчатый</option>
+        </select>
 
-            <span class="current">
-                Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}.
-            </span>
+        <!-- Кнопка отправки формы -->
+        <button type="submit">Построить график</button>
+    </form>
 
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}">Следующая</a>
-                <a href="?page={{ page_obj.paginator.num_pages }}">Последняя &raquo;</a>
-            {% endif %}
-        </span>
+    <!-- Место для отображения графика -->
+    <div id="graph">
+        {{ graph|safe }}  <!-- Вставка сгенерированного HTML-кода графика -->
     </div>
 
-    <a href="{% url 'audit:home' %}">Вернуться назад</a>
+    <footer>
+        <p>Исторические данные и прогноз на основании анализа данных из БД</p>
+    </footer>
 </body>
 </html>
-
-
