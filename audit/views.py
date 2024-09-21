@@ -1,18 +1,22 @@
 import os
 import csv
 import time
-import plotly.express as px
+from datetime import datetime
+
 import plotly.graph_objs as go
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 from django.shortcuts import render, redirect
 
 from audit.forms import AuditForm
 from audit.models import Data
+
+import psycopg2
+
+path_to_media = 'C:/Users/konov/py_project/Diplom_2/media'
 
 
 def home(request):
@@ -25,43 +29,57 @@ def home(request):
             uploaded_file = audit_instance.file.path  # Получаем путь к файлу
 
             try:
-                # Обработка файла (например, если это CSV)
-                with open(uploaded_file, newline="", encoding="utf-8") as csvfile:
-                    reader = csv.reader(csvfile)
-                    # Пропускаем первую строку (если она заголовок)
-                    next(reader, None)
-                    for row in reader:
-                        try:
-                            # Извлечение данных согласно полям модели
-                            price = float(row[0])  # преобразование str в float
-                            count = int(row[1])
-                            add_cost = float(row[2])
-                            company = row[3]
-                            product = row[4]
-
-                            # Создание экземпляра модели
-                            Data.objects.create(
-                                price=price,
-                                count=count,
-                                add_cost=add_cost,
-                                company=company,
-                                product=product,
-                                user=request.user,
-                            )
-
-                        except (ValueError, IndexError) as e:
-                            messages.error(request, f"Ошибка при обработке строки: {row} - {e}")
-                        except Exception as e:
-                            messages.error(request, f"Ошибка при сохранении в БД: {e}")
-                            continue
-
-                # Удаляем файл после обработки
-                os.remove(uploaded_file)
+                # ToDo: параметры брать settings!
+                conn_db = psycopg2.connect(
+                    dbname="diploma", user="postgres", password="12345", host="localhost"
+                )
+                df = pd.read_csv(uploaded_file, header=None)
+                df[5] = [request.user.id] * df.shape[0]
+                df[6] = [datetime.now()] * df.shape[0]
+                df.to_csv(uploaded_file, index=False, header=False)
+                cur = conn_db.cursor()
+                f = open(uploaded_file)
+                cur.copy_from(f, 'audit_data', sep=',', columns=['price', 'count', 'add_cost', 'company', 'product', 'user_id', 'upload_date'])
+                conn_db.commit()
+                conn_db.close()
+                # # Обработка файла (например, если это CSV)
+                # with open(uploaded_file, newline="", encoding="utf-8") as csvfile:
+                #     reader = csv.reader(csvfile)
+                #     # Пропускаем первую строку (если она заголовок)
+                #     next(reader, None)
+                #     for row in reader:
+                #         try:
+                #             # Извлечение данных согласно полям модели
+                #             price = float(row[0])  # преобразование str в float
+                #             count = int(row[1])
+                #             add_cost = float(row[2])
+                #             company = row[3]
+                #             product = row[4]
+                #
+                #             # Создание экземпляра модели
+                #             Data.objects.create(
+                #                 price=price,
+                #                 count=count,
+                #                 add_cost=add_cost,
+                #                 company=company,
+                #                 product=product,
+                #                 user=request.user,
+                #             )
+                #
+                #         except (ValueError, IndexError) as e:
+                #             messages.error(request, f"Ошибка при обработке строки: {row} - {e}")
+                #         except Exception as e:
+                #             messages.error(request, f"Ошибка при сохранении в БД: {e}")
+                #             continue
+                #
+                # # Удаляем файл после обработки
+                # os.remove(uploaded_file)
 
                 # Сообщение об успешной загрузке файла
                 messages.success(request, 'Файл успешно загружен и обработан.')
             except Exception as e:
                 messages.error(request, f"Ошибка при обработке файла: {e}")
+                print(e)
 
                 # Сообщение об успешном удалении файла
                 if os.path.exists(uploaded_file):
@@ -82,9 +100,18 @@ def home(request):
 
     return render(request, "home.html", {"form": form})
 
+'''
 
+Надо создать еще один столбец с вычислением среднего значения в день загрузки файла
+Лучше в коде прописать, что в таблице нужно выводить среднее значение по товару в день загрузки файла
+и на основании этих данных рассчитывать модель ценообразования
+'''
 
 def forecast_price(data_entries, forecast_days=10):
+    # ToDo: Сделать, чтобы пользователь сам мог выбирать на сколько дней прогноз
+    # ToDo: Надо ли делать, чтобы была возможность посмотреть прогноз для конкретной компании
+    # ToDo: Надо ли делать гистограмму или графики, которые просто буду показывать данные в бд
+    # Добавить кнопку возвращения на главную страницу
     """
     Прогнозирование цены продукта на основе данных из модели.
 
