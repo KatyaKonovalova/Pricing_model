@@ -1,22 +1,11 @@
-import os
-import csv
-import time
-from datetime import datetime
-
-import plotly.graph_objs as go
+import psycopg2
 import pandas as pd
-import numpy as np
-from sklearn.linear_model import LinearRegression
-
+from datetime import datetime
 from django.contrib import messages
 from django.shortcuts import render, redirect
-
 from audit.forms import AuditForm
 from audit.models import Data
-
-import psycopg2
-
-path_to_media = 'C:/Users/konov/py_project/Diplom_2/media'
+import plotly.graph_objs as go
 
 
 def home(request):
@@ -29,68 +18,37 @@ def home(request):
             uploaded_file = audit_instance.file.path  # Получаем путь к файлу
 
             try:
-                # ToDo: параметры брать settings!
+                # Подключение к базе данных
                 conn_db = psycopg2.connect(
                     dbname="diploma", user="postgres", password="12345", host="localhost"
                 )
+
+                # Загрузка данных из CSV файла
                 df = pd.read_csv(uploaded_file, header=None)
+
+                # Добавление user_id и даты загрузки
                 df[5] = [request.user.id] * df.shape[0]
                 df[6] = [datetime.now()] * df.shape[0]
+
                 df.to_csv(uploaded_file, index=False, header=False)
+
+                # Копирование данных в базу данных
                 cur = conn_db.cursor()
-                f = open(uploaded_file)
-                cur.copy_from(f, 'audit_data', sep=',', columns=['price', 'count', 'add_cost', 'company', 'product', 'user_id', 'upload_date'])
+                with open(uploaded_file) as f:
+                    cur.copy_from(f, 'audit_data', sep=',',
+                                  columns=['price', 'count', 'add_cost', 'company', 'product', 'user_id',
+                                           'upload_date'])
                 conn_db.commit()
+
+                # Закрытие соединения с БД
                 conn_db.close()
-                # # Обработка файла (например, если это CSV)
-                # with open(uploaded_file, newline="", encoding="utf-8") as csvfile:
-                #     reader = csv.reader(csvfile)
-                #     # Пропускаем первую строку (если она заголовок)
-                #     next(reader, None)
-                #     for row in reader:
-                #         try:
-                #             # Извлечение данных согласно полям модели
-                #             price = float(row[0])  # преобразование str в float
-                #             count = int(row[1])
-                #             add_cost = float(row[2])
-                #             company = row[3]
-                #             product = row[4]
-                #
-                #             # Создание экземпляра модели
-                #             Data.objects.create(
-                #                 price=price,
-                #                 count=count,
-                #                 add_cost=add_cost,
-                #                 company=company,
-                #                 product=product,
-                #                 user=request.user,
-                #             )
-                #
-                #         except (ValueError, IndexError) as e:
-                #             messages.error(request, f"Ошибка при обработке строки: {row} - {e}")
-                #         except Exception as e:
-                #             messages.error(request, f"Ошибка при сохранении в БД: {e}")
-                #             continue
-                #
-                # # Удаляем файл после обработки
-                # os.remove(uploaded_file)
 
                 # Сообщение об успешной загрузке файла
                 messages.success(request, 'Файл успешно загружен и обработан.')
+
             except Exception as e:
                 messages.error(request, f"Ошибка при обработке файла: {e}")
                 print(e)
-
-                # Сообщение об успешном удалении файла
-                if os.path.exists(uploaded_file):
-                    try:
-                        time.sleep(1)  # Небольшая задержка перед удалением файла
-                        os.remove(uploaded_file)
-                        messages.success(request, 'Файл успешно удалён.')
-                    except Exception as e:
-                        messages.error(request, f"Ошибка при удалении файла: {e}")
-                else:
-                    messages.error(request, "Файл для удаления не найден.")
 
             return redirect("audit:home")
         else:
@@ -100,6 +58,7 @@ def home(request):
 
     return render(request, "home.html", {"form": form})
 
+
 '''
 
 Надо создать еще один столбец с вычислением среднего значения в день загрузки файла
@@ -107,83 +66,168 @@ def home(request):
 и на основании этих данных рассчитывать модель ценообразования
 '''
 
-def forecast_price(data_entries, forecast_days=10):
-    # ToDo: Сделать, чтобы пользователь сам мог выбирать на сколько дней прогноз
-    # ToDo: Надо ли делать, чтобы была возможность посмотреть прогноз для конкретной компании
-    # ToDo: Надо ли делать гистограмму или графики, которые просто буду показывать данные в бд
-    # Добавить кнопку возвращения на главную страницу
+
+def calculate_median_price(data_entries):
     """
-    Прогнозирование цены продукта на основе данных из модели.
-
-    :param data_entries: queryset с данными модели Data.
-    :param forecast_days: количество дней для прогноза.
-    :return: x_values_extended, y_values_extended - массивы для построения графика.
+    Рассчитывает медианную цену продуктов по дням загрузки.
     """
-    # Извлекаем даты и цены из записей
-    x_values = [entry.upload_date for entry in data_entries]
-    y_values = [entry.price for entry in data_entries]
+    # Преобразуем queryset в DataFrame для работы с pandas
+    data = pd.DataFrame(list(data_entries.values('upload_date', 'price', 'product')))
 
-    # Преобразуем даты в числовой формат для модели
-    x_values_numeric = pd.to_datetime(x_values).map(pd.Timestamp.timestamp).values.reshape(-1, 1)
-    y_values_numeric = np.array(y_values)
+    # Преобразуем дату в формат pandas и отбросим время (оставим только дату)
+    data['upload_date'] = pd.to_datetime(data['upload_date']).dt.date
 
-    if len(x_values_numeric) > 1:
-        # Строим модель линейной регрессии
-        model = LinearRegression()
-        model.fit(x_values_numeric, y_values_numeric)
+    # Преобразуем столбец 'price' в числовой формат, игнорируя некорректные значения
+    data['price'] = pd.to_numeric(data['price'], errors='coerce')
 
-        # Прогнозируем на несколько дней вперед
-        last_date = pd.to_datetime(x_values[-1])  # Последняя дата
-        future_dates = [last_date + pd.Timedelta(days=i) for i in range(1, forecast_days + 1)]
+    # Удаляем строки с NaN значениями в цене
+    data = data.dropna(subset=['price'])
 
-        future_x_numeric = pd.to_datetime(future_dates).map(pd.Timestamp.timestamp).values.reshape(-1, 1)
-        future_y = model.predict(future_x_numeric)
+    if data.empty:
+        print("Отладка: данные пусты после очистки")
+        return [], []
 
-        # Объединяем исторические данные и прогноз
-        x_values_extended = np.append(x_values_numeric, future_x_numeric).reshape(-1)
-        y_values_extended = np.append(y_values_numeric, future_y)
-    else:
-        # Если данных недостаточно, используем только исторические данные
-        x_values_extended = x_values_numeric.reshape(-1)
-        y_values_extended = y_values_numeric
+    # Группируем данные по дате (без учета времени) и считаем медианную цену
+    grouped_data = data.groupby('upload_date')['price'].median().reset_index()
 
-    # Преобразуем числовые даты обратно в нормальные для графика
-    x_dates_extended = pd.to_datetime(x_values_extended, unit='s')
+    # Извлекаем даты и медианные цены
+    x_values = grouped_data['upload_date']
+    y_values = grouped_data['price']
 
-    return x_dates_extended, y_values_extended
+    print("Отладка: сгруппированные данные с медианной ценой по дням")
+    print(grouped_data)
+
+    return x_values, y_values
+
+
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
+
+
+def add_trend_and_forecast(x_values, y_values, days_to_forecast=7):
+    """
+    Добавляет линию тренда и прогноз на основе линейной регрессии.
+    Возвращает расширенные x и y значения с прогнозом.
+    """
+    # Преобразуем даты в числа для регрессии
+    x_numeric = np.arange(len(x_values)).reshape(-1, 1)  # Преобразуем индексы в числовой вид
+
+    # Полиномиальная регрессия (2-й порядок)
+    poly = PolynomialFeatures(degree=2)
+    x_poly = poly.fit_transform(x_numeric)
+
+    model = LinearRegression()
+    model.fit(x_poly, y_values)
+
+    # Предсказание трендовой линии на исторические данные
+    y_trend = model.predict(x_poly)
+
+    # Прогнозирование на будущие дни
+    future_x_numeric = np.arange(len(x_values), len(x_values) + days_to_forecast).reshape(-1, 1)
+    future_x_poly = poly.transform(future_x_numeric)
+    future_y_forecast = model.predict(future_x_poly)
+
+    # Добавляем прогнозированные даты и значения
+    future_dates = pd.date_range(start=x_values.iloc[-1], periods=days_to_forecast + 1, freq='D')[1:]
+
+    # Объединяем данные для возвращения
+    extended_x_values = pd.concat([x_values, pd.Series(future_dates)])
+    extended_y_values = np.concatenate([y_trend, future_y_forecast])
+
+    return extended_x_values, extended_y_values, y_trend
+
 
 def graph(request):
     if request.method == 'POST':
-        product_name = request.POST.get('product')
-        x_axis = request.POST.get('x_axis', 'upload_date')
-        y_axis = request.POST.get('y_axis', 'price')
-        chart_type = request.POST.get('chart_type', 'scatter')  # Значение по умолчанию
+        # Получаем продукт, введённый пользователем
+        product_name = request.POST.get('product_input', '').strip()
 
-        # Получаем данные из базы данных
-        data_entries = Data.objects.filter(user=request.user)
+        if not product_name:
+            messages.error(request, "Пожалуйста, введите название продукта.")
+            return render(request, 'audit/graph.html', {
+                'graph': '',
+                'products': get_all_products(),
+                'product_input': product_name
+            })
 
-        if product_name:
-            data_entries = data_entries.filter(product=product_name)
+        # Фильтруем данные по введенному продукту
+        data_entries = Data.objects.filter(user=request.user, product=product_name)
 
-        # Прогнозируем цену
-        x_values_extended, y_values_extended = forecast_price(data_entries)
+        if not data_entries.exists():
+            messages.error(request, f"Продукт '{product_name}' не найден.")
+            return render(request, 'audit/graph.html', {
+                'graph': '',
+                'products': get_all_products(),
+                'product_input': product_name
+            })
+
+        try:
+            # Рассчитываем медианные значения
+            x_values, y_values = calculate_median_price(data_entries)
+
+            if len(x_values) == 0 or len(y_values) == 0:
+                messages.error(request, "Недостаточно данных для построения графика.")
+                return render(request, 'audit/graph.html', {
+                    'graph': '',
+                    'products': get_all_products(),
+                    'product_input': product_name
+                })
+
+            # Добавляем линию тренда и прогноз
+            extended_x_values, extended_y_values, y_trend = add_trend_and_forecast(x_values, y_values)
+
+        except Exception as e:
+            messages.error(request, f"Ошибка при построении графика: {e}")
+            return render(request, 'audit/graph.html', {
+                'graph': '',
+                'products': get_all_products(),
+                'product_input': product_name
+            })
 
         # Построение графика
-        if chart_type == 'bar':
-            fig = go.Figure(data=[go.Bar(x=x_values_extended, y=y_values_extended)])
-        elif chart_type == 'scatter':
-            fig = go.Figure(data=[go.Scatter(x=x_values_extended, y=y_values_extended, mode='lines+markers')])
-        elif chart_type == 'line':
-            fig = go.Figure(data=[go.Scatter(x=x_values_extended, y=y_values_extended, mode='lines')])
-        else:
-            fig = go.Figure(data=[go.Scatter(x=x_values_extended, y=y_values_extended, mode='lines+markers')])
+        bar_trace = go.Bar(
+            x=x_values,
+            y=y_values,
+            name='Медианная цена',
+            marker=dict(color='rgba(34, 139, 34, 0.9)'),
+            width=0.5
+        )
 
-        fig.update_layout(title=f'Прогноз {y_axis} по {x_axis}', xaxis_title=x_axis, yaxis_title=y_axis)
+        # Линия тренда
+        trend_trace = go.Scatter(
+            x=extended_x_values,
+            y=extended_y_values,
+            mode='lines',
+            name='Линия тренда',
+            line=dict(color='red', width=2)
+        )
+
+        fig = go.Figure(data=[bar_trace, trend_trace])
+
+        fig.update_layout(
+            title=f'Медианные цены по продукту "{product_name}" с прогнозом',
+            xaxis_title='Дата загрузки',
+            yaxis_title='Медианная цена',
+            xaxis=dict(type='category'),
+            yaxis=dict(rangemode='tozero')
+        )
+
         graph_div = fig.to_html(full_html=False)
 
         return render(request, 'audit/graph.html', {
             'graph': graph_div,
-            'product': product_name
+            'products': get_all_products(),
+            'product_input': product_name
         })
 
-    return render(request, 'audit/graph.html', {})
+    # Если GET-запрос, отображаем пустую форму
+    return render(request, 'audit/graph.html', {
+        'graph': '',
+        'products': get_all_products(),
+        'product_input': ''
+    })
+
+def get_all_products():
+    """Функция для получения всех уникальных наименований продуктов из базы данных."""
+    return Data.objects.values_list('product', flat=True).distinct()
