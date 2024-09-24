@@ -5,6 +5,126 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>График медианных цен</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> <!-- Подключение Plotly -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet"> <!-- Google Fonts -->
+    <style>
+        /* Общие стили */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f7fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            text-align: center;
+            background-color: #6528e0; /* Изменённый цвет */
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 1.8em; /* Уменьшенный размер шрифта */
+            margin: 0;
+            font-weight: 700;
+        }
+
+        main {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        label {
+            font-weight: 500;
+            font-size: 1.2em;
+        }
+
+        input, button {
+            padding: 10px;
+            font-size: 1.1em;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+            width: 100%;
+        }
+
+        button {
+            background-color: #6528e0; /* Изменённый цвет */
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #5220b0; /* Более тёмный оттенок для hover */
+        }
+
+        #graph {
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 1.1em;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #6528e0; /* Изменённый цвет */
+            color: white;
+        }
+
+        td {
+            background-color: #f9f9f9;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
+        }
+
+        /* Кнопка возврата */
+        .return-button {
+            padding: 15px;
+            background-color: #6528e0; /* Изменённый цвет */
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 1.2em;
+            transition: background-color 0.3s;
+            display: block;
+            margin-top: 20px;
+        }
+
+        .return-button:hover {
+            background-color: #5220b0; /* Более тёмный оттенок для hover */
+        }
+    </style>
 </head>
 <body>
 
@@ -13,7 +133,6 @@
 </header>
 
 <main>
-    <!-- Форма для выбора продукта и периода прогноза -->
     <form method="POST">
         {% csrf_token %}
         <label for="product_input">Введите продукт:</label>
@@ -24,7 +143,6 @@
             {% endfor %}
         </datalist>
 
-        <!-- Поле для ввода периода прогноза -->
         <label for="forecast_period">Введите период прогноза (в днях):</label>
         <input type="number" id="forecast_period" name="forecast_period" min="1" placeholder="Например, 30" value="{{ forecast_period }}">
 
@@ -32,13 +150,12 @@
     </form>
 
     <div id="graph">
-        {{ graph|safe }}  <!-- График будет вставлен здесь -->
+        {{ graph|safe }} <!-- График будет вставлен здесь -->
     </div>
 
-    <!-- Таблица с минимальными и максимальными значениями прогноза -->
     {% if forecast_min and forecast_max %}
         <h3>Прогнозируемые данные:</h3>
-        <table border="1">
+        <table>
             <tr>
                 <th>Описание</th>
                 <th>Дата</th>
@@ -56,6 +173,8 @@
             </tr>
         </table>
     {% endif %}
+
+    <a href="/" class="return-button">Вернуться на главную страницу</a>
 </main>
 
 <footer>

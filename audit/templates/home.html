@@ -90,7 +90,7 @@
             --bs-btn-border-color: var(--bd-violet-bg);
             --bs-btn-hover-color: var(--bs-white);
             --bs-btn-hover-bg: #6528e0;
-            --bs-btn-hover-border-color: #6528e0;
+            --bs-btn-hover-border-color: #7228e0;
             --bs-btn-focus-shadow-rgb: var(--bd-violet-rgb);
             --bs-btn-active-color: var(--bs-btn-hover-color);
             --bs-btn-active-bg: #5a23c8;
@@ -191,27 +191,19 @@
                 <p class="lead text-body-secondary">Модель ценообразования</p>
                 {% if user.is_authenticated %}
                 <p>
-                <a class="btn btn-primary" data-bs-toggle="collapse" href="#multiCollapseExample1" role="button"
-                   aria-expanded="false" aria-controls="multiCollapseExample1">
-                    Создать запрос
-                </a>
-                {% if user.profile_value == 'Data engineer' %}
-                <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#multiCollapseExample2" aria-expanded="false"
-                        aria-controls="multiCollapseExample2">
-                    Загрузить файл
-                </button>
+                    <a class="btn btn-primary" href="{% url 'audit:graph' %}" role="button">
+                        Создать запрос
+                    </a>
+                    {% if user.profile_value == 'Data engineer' %}
+                    <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#multiCollapseExample2" aria-expanded="false"
+                            aria-controls="multiCollapseExample2">
+                        Загрузить файл
+                    </button>
                     {% include 'audit/includes/file_message.html' %}
-                {% endif %}
+                    {% endif %}
                 </p>
                 <div class="row">
-                    <div class="col">
-                        <div class="collapse multi-collapse" id="multiCollapseExample1">
-                            <div class="card card-body">
-                                {% include 'audit/includes/make_request.html' %}
-                            </div>
-                        </div>
-                    </div>
                     <div class="col">
                         <div class="collapse multi-collapse" id="multiCollapseExample2">
                             <div class="card card-body">
