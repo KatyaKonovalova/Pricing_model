@@ -182,7 +182,7 @@ def graph(request):
             forecast_period = 7  # По умолчанию 7 дней
 
         forecast_period = int(forecast_period)
-        data_entries = Data.objects.filter(user=request.user, product=product_name)
+        data_entries = Data.objects.filter(product=product_name)
 
         # Если данные для выбранного продукта отсутствуют, выводим ошибку и возвращаем пустой график
         if not data_entries.exists():
