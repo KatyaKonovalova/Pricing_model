@@ -26,10 +26,15 @@ def home(request):
                 # Загрузка данных из CSV файла
                 df = pd.read_csv(uploaded_file, header=None)
 
+                # Проверяем, что столбцы содержат корректные типы данных
+                df[0] = pd.to_numeric(df[0], errors='coerce')  # Преобразование столбца price в float
+                df = df.dropna(subset=[0])  # Удаляем строки, где price не может быть приведен к числу
+
                 # Добавление user_id и даты загрузки
                 df[5] = [request.user.id] * df.shape[0]
                 df[6] = [datetime.now()] * df.shape[0]
 
+                # Перезаписываем файл без заголовков
                 df.to_csv(uploaded_file, index=False, header=False)
 
                 # Копирование данных в базу данных
@@ -38,24 +43,27 @@ def home(request):
                     cur.copy_from(f, 'audit_data', sep=',',
                                   columns=['price', 'count', 'add_cost', 'company', 'product', 'user_id',
                                            'upload_date'])
-                conn_db.commit()
 
-                # Закрытие соединения с БД
-                conn_db.close()
+                conn_db.commit()
+                cur.close()  # Закрываем курсор
+                conn_db.close()  # Закрываем соединение с БД
 
                 # Сообщение об успешной загрузке файла
                 messages.success(request, 'Файл успешно загружен и обработан.')
 
             except Exception as e:
+                # Обработка ошибки и вывод сообщения пользователю
                 messages.error(request, f"Ошибка при обработке файла: {e}")
-                print(e)
+                print(f"Ошибка при обработке файла: {e}")
 
             return redirect("audit:home")
         else:
+            # Если форма содержит ошибки
             messages.error(request, "Форма содержит ошибки. Проверьте данные и попробуйте снова.")
     else:
         form = AuditForm()
 
+    # Отображение страницы с формой
     return render(request, "home.html", {"form": form})
 
 
