@@ -13,7 +13,7 @@
 </header>
 
 <main>
-    <!-- Форма для выбора продукта с автозаполнением -->
+    <!-- Форма для выбора продукта и периода прогноза -->
     <form method="POST">
         {% csrf_token %}
         <label for="product_input">Введите продукт:</label>
@@ -24,12 +24,38 @@
             {% endfor %}
         </datalist>
 
+        <!-- Поле для ввода периода прогноза -->
+        <label for="forecast_period">Введите период прогноза (в днях):</label>
+        <input type="number" id="forecast_period" name="forecast_period" min="1" placeholder="Например, 30" value="{{ forecast_period }}">
+
         <button type="submit">Построить график</button>
     </form>
 
     <div id="graph">
         {{ graph|safe }}  <!-- График будет вставлен здесь -->
     </div>
+
+    <!-- Таблица с минимальными и максимальными значениями прогноза -->
+    {% if forecast_min and forecast_max %}
+        <h3>Прогнозируемые данные:</h3>
+        <table border="1">
+            <tr>
+                <th>Описание</th>
+                <th>Дата</th>
+                <th>Значение</th>
+            </tr>
+            <tr>
+                <td>Минимальная прогнозируемая цена</td>
+                <td>{{ min_date }}</td>
+                <td>{{ forecast_min }}</td>
+            </tr>
+            <tr>
+                <td>Максимальная прогнозируемая цена</td>
+                <td>{{ max_date }}</td>
+                <td>{{ forecast_max }}</td>
+            </tr>
+        </table>
+    {% endif %}
 </main>
 
 <footer>

@@ -101,57 +101,34 @@ def calculate_median_price(data_entries):
 
 
 import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
-
-
-def add_trend_and_forecast(x_values, y_values, days_to_forecast=7):
-    """
-    Добавляет линию тренда и прогноз на основе линейной регрессии.
-    Возвращает расширенные x и y значения с прогнозом.
-    """
-    # Преобразуем даты в числа для регрессии
-    x_numeric = np.arange(len(x_values)).reshape(-1, 1)  # Преобразуем индексы в числовой вид
-
-    # Полиномиальная регрессия (2-й порядок)
-    poly = PolynomialFeatures(degree=2)
-    x_poly = poly.fit_transform(x_numeric)
-
-    model = LinearRegression()
-    model.fit(x_poly, y_values)
-
-    # Предсказание трендовой линии на исторические данные
-    y_trend = model.predict(x_poly)
-
-    # Прогнозирование на будущие дни
-    future_x_numeric = np.arange(len(x_values), len(x_values) + days_to_forecast).reshape(-1, 1)
-    future_x_poly = poly.transform(future_x_numeric)
-    future_y_forecast = model.predict(future_x_poly)
-
-    # Добавляем прогнозированные даты и значения
-    future_dates = pd.date_range(start=x_values.iloc[-1], periods=days_to_forecast + 1, freq='D')[1:]
-
-    # Объединяем данные для возвращения
-    extended_x_values = pd.concat([x_values, pd.Series(future_dates)])
-    extended_y_values = np.concatenate([y_trend, future_y_forecast])
-
-    return extended_x_values, extended_y_values, y_trend
 
 
 def graph(request):
     if request.method == 'POST':
-        # Получаем продукт, введённый пользователем
+        # Получаем продукт и период прогноза
         product_name = request.POST.get('product_input', '').strip()
+        try:
+            forecast_period = int(request.POST.get('forecast_period', 7))  # По умолчанию 7 дней
+            if forecast_period < 1:
+                raise ValueError("Период прогноза должен быть больше 0.")
+        except ValueError as e:
+            messages.error(request, "Пожалуйста, введите корректное количество дней для прогноза.")
+            return render(request, 'audit/graph.html', {
+                'graph': '',
+                'products': get_all_products(),
+                'product_input': product_name,
+                'forecast_period': '',
+            })
 
         if not product_name:
             messages.error(request, "Пожалуйста, введите название продукта.")
             return render(request, 'audit/graph.html', {
                 'graph': '',
                 'products': get_all_products(),
-                'product_input': product_name
+                'product_input': product_name,
+                'forecast_period': forecast_period
             })
 
-        # Фильтруем данные по введенному продукту
         data_entries = Data.objects.filter(user=request.user, product=product_name)
 
         if not data_entries.exists():
@@ -159,7 +136,8 @@ def graph(request):
             return render(request, 'audit/graph.html', {
                 'graph': '',
                 'products': get_all_products(),
-                'product_input': product_name
+                'product_input': product_name,
+                'forecast_period': forecast_period
             })
 
         try:
@@ -171,18 +149,20 @@ def graph(request):
                 return render(request, 'audit/graph.html', {
                     'graph': '',
                     'products': get_all_products(),
-                    'product_input': product_name
+                    'product_input': product_name,
+                    'forecast_period': forecast_period
                 })
 
-            # Добавляем линию тренда и прогноз
-            extended_x_values, extended_y_values, y_trend = add_trend_and_forecast(x_values, y_values)
+            # Добавляем линию тренда и прогноз с учетом введенного периода
+            extended_x_values, extended_y_values, y_trend, forecast_min, min_date, forecast_max, max_date = add_trend_and_forecast(x_values, y_values, forecast_period)
 
         except Exception as e:
             messages.error(request, f"Ошибка при построении графика: {e}")
             return render(request, 'audit/graph.html', {
                 'graph': '',
                 'products': get_all_products(),
-                'product_input': product_name
+                'product_input': product_name,
+                'forecast_period': forecast_period
             })
 
         # Построение графика
@@ -206,7 +186,7 @@ def graph(request):
         fig = go.Figure(data=[bar_trace, trend_trace])
 
         fig.update_layout(
-            title=f'Медианные цены по продукту "{product_name}" с прогнозом',
+            title=f'Медианные цены по продукту "{product_name}" с прогнозом на {forecast_period} дней',
             xaxis_title='Дата загрузки',
             yaxis_title='Медианная цена',
             xaxis=dict(type='category'),
@@ -215,19 +195,63 @@ def graph(request):
 
         graph_div = fig.to_html(full_html=False)
 
+        # Передаем данные для отображения таблицы с максимальной и минимальной ценой
         return render(request, 'audit/graph.html', {
             'graph': graph_div,
             'products': get_all_products(),
-            'product_input': product_name
+            'product_input': product_name,
+            'forecast_period': forecast_period,
+            'forecast_min': forecast_min,
+            'min_date': min_date,
+            'forecast_max': forecast_max,
+            'max_date': max_date
         })
 
-    # Если GET-запрос, отображаем пустую форму
     return render(request, 'audit/graph.html', {
         'graph': '',
         'products': get_all_products(),
-        'product_input': ''
+        'product_input': '',
+        'forecast_period': 7  # Значение по умолчанию
     })
+
 
 def get_all_products():
     """Функция для получения всех уникальных наименований продуктов из базы данных."""
     return Data.objects.values_list('product', flat=True).distinct()
+
+def add_trend_and_forecast(x_values, y_values, forecast_days):
+    """
+    Добавляет линию тренда и прогноз на указанное количество дней (forecast_days).
+    Возвращает также минимальное и максимальное значение прогноза с датами.
+    """
+    # Преобразование дат в числовое представление для расчета тренда
+    x_numeric = np.arange(len(x_values))
+
+    # Линейная регрессия для построения тренда
+    slope, intercept = np.polyfit(x_numeric, y_values, 1)
+    y_trend = slope * x_numeric + intercept
+
+    # Прогноз на будущее
+    future_x = np.arange(len(x_values), len(x_values) + forecast_days)
+    future_y = slope * future_x + intercept
+
+    # Объединяем данные для отображения
+    extended_x_values = np.concatenate([x_numeric, future_x])
+    extended_y_values = np.concatenate([y_trend, future_y])
+
+    # Преобразуем числовые значения обратно в даты для отображения
+    extended_x_dates = pd.date_range(start=x_values[0], periods=len(extended_x_values)).strftime('%Y-%m-%d')
+
+    # Найти минимальные и максимальные значения в прогнозе
+    forecast_min = np.min(future_y)
+    forecast_max = np.max(future_y)
+
+    # Найти индексы минимального и максимального значения
+    min_index = np.argmin(future_y)
+    max_index = np.argmax(future_y)
+
+    # Даты для минимальной и максимальной цены
+    min_date = extended_x_dates[len(x_values) + min_index]
+    max_date = extended_x_dates[len(x_values) + max_index]
+
+    return extended_x_dates, extended_y_values, y_trend, forecast_min, min_date, forecast_max, max_date
