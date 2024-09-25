@@ -1,11 +1,15 @@
 import psycopg2
 import pandas as pd
+import numpy as np
+import plotly.graph_objs as go
+import plotly.graph_objects as go
+
 from datetime import datetime
-from django.contrib import messages
-from django.shortcuts import render, redirect
+from django.shortcuts import redirect
 from audit.forms import AuditForm
 from audit.models import Data
-import plotly.graph_objs as go
+from django.shortcuts import render
+from django.contrib import messages
 
 
 def home(request):
@@ -66,35 +70,6 @@ def home(request):
 и на основании этих данных рассчитывать модель ценообразования
 '''
 
-from django.shortcuts import render
-
-
-import pandas as pd
-import numpy as np
-import plotly.graph_objs as go
-from django.contrib import messages
-
-import numpy as np
-import pandas as pd
-import plotly.graph_objs as go
-from django.shortcuts import render
-from django.contrib import messages
-from .models import Data
-
-import numpy as np
-import pandas as pd
-import plotly.graph_objs as go
-from django.shortcuts import render
-from django.contrib import messages
-from .models import Data
-
-
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-from django.shortcuts import render
-from django.contrib import messages
-from .models import Data  # ваша модель данных
 
 def calculate_median_price(data_entries):
     """
@@ -108,9 +83,6 @@ def calculate_median_price(data_entries):
 
     # Преобразуем столбец 'price' в числовой формат, игнорируя некорректные значения
     data['price'] = pd.to_numeric(data['price'], errors='coerce')
-
-    # Удаляем строки с NaN значениями в цене
-    data = data.dropna(subset=['price'])
 
     if data.empty:
         print("Отладка: данные пусты после очистки")
@@ -136,29 +108,48 @@ def add_trend_and_forecast(x_values, y_values, forecast_days, trend_type):
     """
     x_numeric = np.arange(len(x_values))
 
+    # Выбор типа линии тренда
     if trend_type == 'linear':
+        # Линейная регрессия
         slope, intercept = np.polyfit(x_numeric, y_values, 1)
         y_trend = slope * x_numeric + intercept
+
+        # Прогноз на будущее
         future_x = np.arange(len(x_values), len(x_values) + forecast_days)
         future_y = slope * future_x + intercept
+
     elif trend_type == 'polynomial':
+        # Полиномиальная регрессия
         coefficients = np.polyfit(x_numeric, y_values, 2)
         y_trend = np.polyval(coefficients, x_numeric)
+
+        # Прогноз на будущее
         future_x = np.arange(len(x_values), len(x_values) + forecast_days)
         future_y = np.polyval(coefficients, future_x)
+
     elif trend_type == 'average':
+        # Средняя линия тренда
         y_trend = np.full(len(x_numeric), np.mean(y_values))
+
+        # Прогноз на будущее
         future_x = np.arange(len(x_values), len(x_values) + forecast_days)
         future_y = np.full(forecast_days, np.mean(y_values))
+
     else:
         raise ValueError(f"Некорректный тип линии тренда: {trend_type}")
 
+    # Объединяем данные для отображения
     extended_x_values = np.concatenate([x_numeric, future_x])
     extended_y_values = np.concatenate([y_trend, future_y])
+
+    # Преобразуем числовые значения обратно в даты для отображения
     extended_x_dates = pd.date_range(start=x_values.iloc[0], periods=len(extended_x_values)).strftime('%Y-%m-%d')
 
+    # Минимальные и максимальные значения в прогнозе
     forecast_min = np.min(future_y)
     forecast_max = np.max(future_y)
+
+    # Даты для минимальной и максимальной цены
     min_date = extended_x_dates[len(x_values) + np.argmin(future_y)]
     max_date = extended_x_dates[len(x_values) + np.argmax(future_y)]
 
@@ -166,19 +157,22 @@ def add_trend_and_forecast(x_values, y_values, forecast_days, trend_type):
 
 
 def graph(request):
+    # Проверяем, что запрос отправлен методом POST (для отправки данных через форму)
     if request.method == 'POST':
+        # Получаем значения из POST-запроса: название продукта, тип линии тренда и период прогноза
         product_name = request.POST.get('product_input', '').strip()
         trend_type = request.POST.get('trend_type', 'linear')
         forecast_period = request.POST.get('forecast_period', 7)
 
+        # Проверяем, является ли введенный период числом, если нет — устанавливаем 7 по умолчанию
         if not forecast_period.isdigit():
             messages.error(request, "Пожалуйста, введите корректное количество дней для прогноза.")
             forecast_period = 7  # По умолчанию 7 дней
 
         forecast_period = int(forecast_period)
-
         data_entries = Data.objects.filter(user=request.user, product=product_name)
 
+        # Если данные для выбранного продукта отсутствуют, выводим ошибку и возвращаем пустой график
         if not data_entries.exists():
             messages.error(request, f"Продукт '{product_name}' не найден.")
             return render(request, 'graph.html', {
@@ -189,8 +183,10 @@ def graph(request):
             })
 
         try:
+            # Рассчитываем медианные цены на основе данных
             x_values, y_values = calculate_median_price(data_entries)
 
+            # Если недостаточно данных для построения графика, выводим сообщение об ошибке
             if len(x_values) == 0 or len(y_values) == 0:
                 messages.error(request, "Недостаточно данных для построения графика.")
                 return render(request, 'graph.html', {
@@ -200,10 +196,12 @@ def graph(request):
                     'forecast_period': forecast_period
                 })
 
+            # Добавляем линию тренда и прогноз на указанный период
             extended_x_values, extended_y_values, y_trend, forecast_min, min_date, forecast_max, max_date = add_trend_and_forecast(
                 x_values, y_values, forecast_period, trend_type
             )
 
+        # Обработка исключений при построении графика
         except Exception as e:
             messages.error(request, f"Ошибка при построении графика: {e}")
             return render(request, 'graph.html', {
@@ -213,6 +211,7 @@ def graph(request):
                 'forecast_period': forecast_period
             })
 
+        # Построение столбчатой диаграммы с медианными ценами
         bar_trace = go.Bar(
             x=x_values,
             y=y_values,
@@ -221,6 +220,7 @@ def graph(request):
             width=0.5
         )
 
+        # Построение линии тренда на основе прогнозируемых данных
         trend_trace = go.Scatter(
             x=extended_x_values,
             y=extended_y_values,
@@ -229,8 +229,10 @@ def graph(request):
             line=dict(color='red', width=2)
         )
 
+        # Создаем объект графика с двумя слоями: столбцы и линия тренда
         fig = go.Figure(data=[bar_trace, trend_trace])
 
+        # Настройки графика: заголовок, метки осей, размер графика
         fig.update_layout(
             title=f'Медианные цены по продукту "{product_name}" с прогнозом на {forecast_period} дней',
             xaxis_title='Дата загрузки',
@@ -242,8 +244,10 @@ def graph(request):
             margin=dict(l=20, r=20, t=50, b=20)
         )
 
+        # Преобразование графика в HTML-код для вставки на веб-страницу
         graph_div = fig.to_html(full_html=False)
 
+        # Возвращаем страницу с построенным графиком
         return render(request, 'audit/graph.html', {
             'graph': graph_div,
             'products': get_all_products(),
@@ -256,6 +260,7 @@ def graph(request):
             'trend_type': trend_type
         })
 
+    # Если метод запроса не POST, просто возвращаем страницу с пустым графиком и дефолтными значениями
     return render(request, 'audit/graph.html', {
         'graph': '',
         'products': get_all_products(),
@@ -264,5 +269,6 @@ def graph(request):
     })
 
 
+# Функция для получения всех уникальных продуктов в базе данных
 def get_all_products():
     return Data.objects.values_list('product', flat=True).distinct()
