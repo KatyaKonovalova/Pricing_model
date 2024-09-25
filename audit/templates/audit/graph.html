@@ -4,182 +4,132 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>График медианных цен</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> <!-- Подключение Plotly -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet"> <!-- Google Fonts -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* Общие стили */
-        * {
-            box-sizing: border-box;
-        }
-
         body {
             font-family: 'Roboto', sans-serif;
             background-color: #f4f7fa;
             margin: 0;
             padding: 0;
         }
-
         header {
             text-align: center;
-            background-color: #6528e0; /* Изменённый цвет */
+            background-color: #6528e0;
             color: white;
-            padding: 20px 0;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            font-size: 1.8em; /* Уменьшенный размер шрифта */
-            margin: 0;
-            font-weight: 700;
-        }
-
-        main {
-            max-width: 800px;
-            margin: 40px auto;
             padding: 20px;
-            background-color: white;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
-
+        main {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 30px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
         form {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 15px;
             margin-bottom: 30px;
         }
-
         label {
             font-weight: 500;
-            font-size: 1.2em;
+            color: #333;
         }
-
-        input, button {
-            padding: 10px;
+        input, select, button {
             font-size: 1.1em;
+            padding: 12px;
             border-radius: 4px;
             border: 1px solid #ccc;
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
-            width: 100%;
+            transition: border 0.3s;
         }
-
+        input:focus, select:focus {
+            border-color: #6528e0;
+            outline: none;
+        }
         button {
-            background-color: #6528e0; /* Изменённый цвет */
+            background-color: #6528e0;
             color: white;
-            border: none;
             cursor: pointer;
-            transition: background-color 0.3s;
+            border: none;
+            transition: background-color 0.3s, transform 0.2s;
         }
-
         button:hover {
-            background-color: #5220b0; /* Более тёмный оттенок для hover */
+            background-color: #5220b0;
+            transform: scale(1.05);
         }
-
         #graph {
-            margin-bottom: 30px;
-        }
-
-        table {
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 1.1em;
+            height: 600px; /* Увеличение размера графика */
+            margin: 20px 0;
         }
-
-        th, td {
-            border: 1px solid #ccc;
-            padding: 10px;
-            text-align: center;
-        }
-
-        th {
-            background-color: #6528e0; /* Изменённый цвет */
+        .return-button {
+            padding: 15px;
+            background-color: #6528e0;
             color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            text-align: center;
+            display: block;
+            margin-top: 20px;
+            transition: background-color 0.3s, transform 0.2s;
         }
-
-        td {
-            background-color: #f9f9f9;
+        .return-button:hover {
+            background-color: #5220b0;
+            transform: scale(1.05);
         }
-
         footer {
             text-align: center;
             margin-top: 40px;
             color: #666;
-        }
-
-        /* Кнопка возврата */
-        .return-button {
-            padding: 15px;
-            background-color: #6528e0; /* Изменённый цвет */
-            color: white;
-            text-align: center;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 1.2em;
-            transition: background-color 0.3s;
-            display: block;
-            margin-top: 20px;
-        }
-
-        .return-button:hover {
-            background-color: #5220b0; /* Более тёмный оттенок для hover */
+            font-size: 0.9em;
         }
     </style>
 </head>
 <body>
-
 <header>
     <h1>График медианных цен по продукту</h1>
 </header>
-
 <main>
     <form method="POST">
         {% csrf_token %}
-        <label for="product_input">Введите продукт:</label>
-        <input type="text" id="product_input" name="product_input" list="product_list" value="{{ product_input }}" placeholder="Введите или выберите продукт">
+        <label for="product_input">Выберите продукт:</label>
+        <input type="text" id="product_input" name="product_input" value="{{ product_input }}" required list="product_list">
         <datalist id="product_list">
             {% for product in products %}
                 <option value="{{ product }}"></option>
             {% endfor %}
         </datalist>
 
-        <label for="forecast_period">Введите период прогноза (в днях):</label>
-        <input type="number" id="forecast_period" name="forecast_period" min="1" placeholder="Например, 30" value="{{ forecast_period }}">
+        <label for="trend_type">Тип линии тренда:</label>
+        <select id="trend_type" name="trend_type">
+            <option value="linear" {% if trend_type == 'linear' %}selected{% endif %}>Линейная</option>
+            <option value="polynomial" {% if trend_type == 'polynomial' %}selected{% endif %}>Полиномиальная</option>
+            <option value="average" {% if trend_type == 'average' %}selected{% endif %}>Средняя</option>
+        </select>
+
+        <label for="forecast_period">Период прогноза (в днях):</label>
+        <input type="number" id="forecast_period" name="forecast_period" value="{{ forecast_period }}" min="1">
 
         <button type="submit">Построить график</button>
     </form>
 
     <div id="graph">
-        {{ graph|safe }} <!-- График будет вставлен здесь -->
+        {{ graph|safe }}
     </div>
 
     {% if forecast_min and forecast_max %}
         <h3>Прогнозируемые данные:</h3>
-        <table>
-            <tr>
-                <th>Описание</th>
-                <th>Дата</th>
-                <th>Значение</th>
-            </tr>
-            <tr>
-                <td>Минимальная прогнозируемая цена</td>
-                <td>{{ min_date }}</td>
-                <td>{{ forecast_min }}</td>
-            </tr>
-            <tr>
-                <td>Максимальная прогнозируемая цена</td>
-                <td>{{ max_date }}</td>
-                <td>{{ forecast_max }}</td>
-            </tr>
-        </table>
+        <p>Минимальная прогнозируемая цена: {{ forecast_min }} ({{ min_date }})</p>
+        <p>Максимальная прогнозируемая цена: {{ forecast_max }} ({{ max_date }})</p>
     {% endif %}
 
-    <a href="/" class="return-button">Вернуться на главную страницу</a>
+    <a href="/" class="return-button">Вернуться на главную</a>
 </main>
-
 <footer>
     <p>&copy; 2024 Прогноз цен</p>
 </footer>
-
 </body>
 </html>
