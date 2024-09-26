@@ -126,7 +126,7 @@
         <p>Максимальная прогнозируемая цена: {{ forecast_max }} ({{ max_date }})</p>
     {% endif %}
 
-    <a href="/" class="return-button">Вернуться на главную</a>
+    <a href="{% url 'audit:home' %}" class="return-button">Вернуться на главную</a>
 </main>
 <footer>
     <p>&copy; 2024 Прогноз цен</p>

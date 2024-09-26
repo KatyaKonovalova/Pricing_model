@@ -11,6 +11,8 @@ from audit.models import Data
 from django.shortcuts import render
 from django.contrib import messages
 
+from config import settings
+
 
 def home(request):
     if request.method == "POST":
@@ -22,18 +24,33 @@ def home(request):
             uploaded_file = audit_instance.file.path  # Получаем путь к файлу
 
             try:
-                # Подключение к базе данных
+                # Подключение к базе данных на основе settings.py
+                db_settings = settings.DATABASES['default']
+
                 conn_db = psycopg2.connect(
-                    dbname="diploma", user="postgres", password="12345", host="localhost"
+                    dbname=db_settings['NAME'],
+                    user=db_settings['USER'],
+                    password=db_settings['PASSWORD'],
+                    host=db_settings['HOST'] if db_settings['HOST'] else 'localhost',
+                    port=db_settings['PORT'] if db_settings['PORT'] else '5432'
+                    # Укажите 5432 по умолчанию, если порт не указан
                 )
 
-                # Загрузка данных из CSV файла
+                # Чтение файла без заголовка для определения структуры
                 df = pd.read_csv(uploaded_file, header=None)
 
-                # Добавление user_id и даты загрузки
+                # Проверка первой строки: являются ли все ячейки строками (т.е. это может быть заголовок)
+                contains_header = all(isinstance(cell, str) for cell in df.iloc[0])
+
+                # Если это заголовок, удаляем первую строку
+                if contains_header:
+                    df = df[1:]
+
+                # Добавление user_id и даты загрузки в файл
                 df[5] = [request.user.id] * df.shape[0]
                 df[6] = [datetime.now()] * df.shape[0]
 
+                # Перезапись файла без заголовков (в случае их наличия)
                 df.to_csv(uploaded_file, index=False, header=False)
 
                 # Копирование данных в базу данных
@@ -54,7 +71,6 @@ def home(request):
                 messages.error(request, f"Ошибка при обработке файла: {e}")
                 print(e)
 
-            return redirect("audit:home")
         else:
             messages.error(request, "Форма содержит ошибки. Проверьте данные и попробуйте снова.")
     else:
@@ -62,13 +78,6 @@ def home(request):
 
     return render(request, "home.html", {"form": form})
 
-
-'''
-
-Надо создать еще один столбец с вычислением среднего значения в день загрузки файла
-Лучше в коде прописать, что в таблице нужно выводить среднее значение по товару в день загрузки файла
-и на основании этих данных рассчитывать модель ценообразования
-'''
 
 
 def calculate_median_price(data_entries):
@@ -82,6 +91,9 @@ def calculate_median_price(data_entries):
     data['upload_date'] = pd.to_datetime(data['upload_date']).dt.date
 
     # Преобразуем столбец 'price' в числовой формат, игнорируя некорректные значения
+    data['price'] = pd.to_numeric(data['price'], errors='coerce')
+
+    # Удаляем строки с NaN значениями в цене
     data['price'] = pd.to_numeric(data['price'], errors='coerce')
 
     if data.empty:
@@ -175,7 +187,7 @@ def graph(request):
         # Если данные для выбранного продукта отсутствуют, выводим ошибку и возвращаем пустой график
         if not data_entries.exists():
             messages.error(request, f"Продукт '{product_name}' не найден.")
-            return render(request, 'graph.html', {
+            return render(request, 'audit/graph.html', {
                 'graph': '',
                 'products': get_all_products(),
                 'product_input': product_name,
@@ -189,7 +201,7 @@ def graph(request):
             # Если недостаточно данных для построения графика, выводим сообщение об ошибке
             if len(x_values) == 0 or len(y_values) == 0:
                 messages.error(request, "Недостаточно данных для построения графика.")
-                return render(request, 'graph.html', {
+                return render(request, 'audit/graph.html', {
                     'graph': '',
                     'products': get_all_products(),
                     'product_input': product_name,
@@ -204,7 +216,7 @@ def graph(request):
         # Обработка исключений при построении графика
         except Exception as e:
             messages.error(request, f"Ошибка при построении графика: {e}")
-            return render(request, 'graph.html', {
+            return render(request, 'audit/graph.html', {
                 'graph': '',
                 'products': get_all_products(),
                 'product_input': product_name,
