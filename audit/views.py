@@ -80,9 +80,9 @@ def home(request):
 
 
 
-def calculate_median_price(data_entries):
+def calculate_price(data_entries, price_type):
     """
-    Рассчитывает медианную цену продуктов по дням загрузки.
+    Рассчитывает медианную, минимальную или максимальную цену продуктов по дням загрузки в зависимости от выбранного типа цены.
     """
     # Преобразуем queryset в DataFrame для работы с pandas
     data = pd.DataFrame(list(data_entries.values('upload_date', 'price', 'product')))
@@ -94,23 +94,31 @@ def calculate_median_price(data_entries):
     data['price'] = pd.to_numeric(data['price'], errors='coerce')
 
     # Удаляем строки с NaN значениями в цене
-    data['price'] = pd.to_numeric(data['price'], errors='coerce')
+    data = data.dropna(subset=['price'])
 
     if data.empty:
         print("Отладка: данные пусты после очистки")
         return [], []
 
-    # Группируем данные по дате (без учета времени) и считаем медианную цену
-    grouped_data = data.groupby('upload_date')['price'].median().reset_index()
+    # Группируем данные по дате и рассчитываем нужный тип цены
+    if price_type == 'median':
+        grouped_data = data.groupby('upload_date')['price'].median().reset_index()
+    elif price_type == 'min':
+        grouped_data = data.groupby('upload_date')['price'].min().reset_index()
+    elif price_type == 'max':
+        grouped_data = data.groupby('upload_date')['price'].max().reset_index()
+    else:
+        raise ValueError(f"Некорректный тип цены: {price_type}")
 
-    # Извлекаем даты и медианные цены
+    # Извлекаем даты и цены
     x_values = grouped_data['upload_date']
     y_values = grouped_data['price']
 
-    print("Отладка: сгруппированные данные с медианной ценой по дням")
+    print(f"Отладка: сгруппированные данные с {price_type} ценой по дням")
     print(grouped_data)
 
     return x_values, y_values
+
 
 
 def add_trend_and_forecast(x_values, y_values, forecast_days, trend_type):
@@ -171,9 +179,10 @@ def add_trend_and_forecast(x_values, y_values, forecast_days, trend_type):
 def graph(request):
     # Проверяем, что запрос отправлен методом POST (для отправки данных через форму)
     if request.method == 'POST':
-        # Получаем значения из POST-запроса: название продукта, тип линии тренда и период прогноза
+        # Получаем значения из POST-запроса: название продукта, тип линии тренда, тип цены и период прогноза
         product_name = request.POST.get('product_input', '').strip()
         trend_type = request.POST.get('trend_type', 'linear')
+        price_type = request.POST.get('price_type', 'median')  # Получаем тип цены
         forecast_period = request.POST.get('forecast_period', 7)
 
         # Проверяем, является ли введенный период числом, если нет — устанавливаем 7 по умолчанию
@@ -195,8 +204,8 @@ def graph(request):
             })
 
         try:
-            # Рассчитываем медианные цены на основе данных
-            x_values, y_values = calculate_median_price(data_entries)
+            # Рассчитываем выбранный тип цены (медианная, минимальная или максимальная)
+            x_values, y_values = calculate_price(data_entries, price_type)
 
             # Если недостаточно данных для построения графика, выводим сообщение об ошибке
             if len(x_values) == 0 or len(y_values) == 0:
@@ -223,11 +232,11 @@ def graph(request):
                 'forecast_period': forecast_period
             })
 
-        # Построение столбчатой диаграммы с медианными ценами
+        # Построение столбчатой диаграммы с выбранным типом цен
         bar_trace = go.Bar(
             x=x_values,
             y=y_values,
-            name='Медианная цена',
+            name=f'{price_type.capitalize()} цена',
             marker=dict(color='rgba(34, 139, 34, 0.9)'),
             width=0.5
         )
@@ -246,9 +255,9 @@ def graph(request):
 
         # Настройки графика: заголовок, метки осей, размер графика
         fig.update_layout(
-            title=f'Медианные цены по продукту "{product_name}" с прогнозом на {forecast_period} дней',
+            title=f'{price_type.capitalize()} цены по продукту "{product_name}" с прогнозом на {forecast_period} дней',
             xaxis_title='Дата загрузки',
-            yaxis_title='Медианная цена',
+            yaxis_title=f'{price_type.capitalize()} цена',
             xaxis=dict(type='category'),
             yaxis=dict(rangemode='tozero'),
             height=600,
@@ -269,7 +278,8 @@ def graph(request):
             'min_date': min_date,
             'forecast_max': forecast_max,
             'max_date': max_date,
-            'trend_type': trend_type
+            'trend_type': trend_type,
+            'price_type': price_type
         })
 
     # Если метод запроса не POST, просто возвращаем страницу с пустым графиком и дефолтными значениями
@@ -279,6 +289,7 @@ def graph(request):
         'product_input': '',
         'forecast_period': 7
     })
+
 
 
 # Функция для получения всех уникальных продуктов в базе данных

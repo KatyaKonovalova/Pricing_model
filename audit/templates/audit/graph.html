@@ -110,6 +110,13 @@
             <option value="average" {% if trend_type == 'average' %}selected{% endif %}>Средняя</option>
         </select>
 
+        <label for="price_type">Тип цены:</label>
+        <select id="price_type" name="price_type">
+            <option value="median" {% if price_type == 'median' %}selected{% endif %}>Медианная</option>
+            <option value="min" {% if price_type == 'min' %}selected{% endif %}>Минимальная</option>
+            <option value="max" {% if price_type == 'max' %}selected{% endif %}>Максимальная</option>
+        </select>
+
         <label for="forecast_period">Период прогноза (в днях):</label>
         <input type="number" id="forecast_period" name="forecast_period" value="{{ forecast_period }}" min="1">
 
