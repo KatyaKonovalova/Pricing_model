@@ -62,8 +62,22 @@
         }
         #graph {
             width: 100%;
-            height: 600px; /* Увеличение размера графика */
+            height: 600px;
             margin: 20px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        th {
+            background-color: #6528e0;
+            color: white;
         }
         .return-button {
             padding: 15px;
@@ -103,18 +117,18 @@
             {% endfor %}
         </datalist>
 
+        <label for="price_type">Тип цены:</label>
+        <select id="price_type" name="price_type">
+            <option value="median" {% if price_type == 'median' %}selected{% endif %}>Медианная</option>
+            <option value="max" {% if price_type == 'max' %}selected{% endif %}>Максимальная</option>
+            <option value="min" {% if price_type == 'min' %}selected{% endif %}>Минимальная</option>
+        </select>
+
         <label for="trend_type">Тип линии тренда:</label>
         <select id="trend_type" name="trend_type">
             <option value="linear" {% if trend_type == 'linear' %}selected{% endif %}>Линейная</option>
             <option value="polynomial" {% if trend_type == 'polynomial' %}selected{% endif %}>Полиномиальная</option>
             <option value="average" {% if trend_type == 'average' %}selected{% endif %}>Средняя</option>
-        </select>
-
-        <label for="price_type">Тип цены:</label>
-        <select id="price_type" name="price_type">
-            <option value="median" {% if price_type == 'median' %}selected{% endif %}>Медианная</option>
-            <option value="min" {% if price_type == 'min' %}selected{% endif %}>Минимальная</option>
-            <option value="max" {% if price_type == 'max' %}selected{% endif %}>Максимальная</option>
         </select>
 
         <label for="forecast_period">Период прогноза (в днях):</label>
@@ -127,10 +141,24 @@
         {{ graph|safe }}
     </div>
 
-    {% if forecast_min and forecast_max %}
-        <h3>Прогнозируемые данные:</h3>
-        <p>Минимальная прогнозируемая цена: {{ forecast_min }} ({{ min_date }})</p>
-        <p>Максимальная прогнозируемая цена: {{ forecast_max }} ({{ max_date }})</p>
+    {% if table_data %}
+        <h3>Данные за выбранный период:</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Цена</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for date, price in table_data %}
+                    <tr>
+                        <td>{{ date }}</td>
+                        <td>{{ price }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     {% endif %}
 
     <a href="{% url 'audit:home' %}" class="return-button">Вернуться на главную</a>

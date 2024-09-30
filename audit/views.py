@@ -177,23 +177,19 @@ def add_trend_and_forecast(x_values, y_values, forecast_days, trend_type):
 
 
 def graph(request):
-    # Проверяем, что запрос отправлен методом POST (для отправки данных через форму)
     if request.method == 'POST':
-        # Получаем значения из POST-запроса: название продукта, тип линии тренда, тип цены и период прогноза
         product_name = request.POST.get('product_input', '').strip()
         trend_type = request.POST.get('trend_type', 'linear')
         price_type = request.POST.get('price_type', 'median')  # Получаем тип цены
         forecast_period = request.POST.get('forecast_period', 7)
 
-        # Проверяем, является ли введенный период числом, если нет — устанавливаем 7 по умолчанию
         if not forecast_period.isdigit():
             messages.error(request, "Пожалуйста, введите корректное количество дней для прогноза.")
-            forecast_period = 7  # По умолчанию 7 дней
+            forecast_period = 7
 
         forecast_period = int(forecast_period)
         data_entries = Data.objects.filter(product=product_name)
 
-        # Если данные для выбранного продукта отсутствуют, выводим ошибку и возвращаем пустой график
         if not data_entries.exists():
             messages.error(request, f"Продукт '{product_name}' не найден.")
             return render(request, 'audit/graph.html', {
@@ -207,7 +203,6 @@ def graph(request):
             # Рассчитываем выбранный тип цены (медианная, минимальная или максимальная)
             x_values, y_values = calculate_price(data_entries, price_type)
 
-            # Если недостаточно данных для построения графика, выводим сообщение об ошибке
             if len(x_values) == 0 or len(y_values) == 0:
                 messages.error(request, "Недостаточно данных для построения графика.")
                 return render(request, 'audit/graph.html', {
@@ -222,7 +217,6 @@ def graph(request):
                 x_values, y_values, forecast_period, trend_type
             )
 
-        # Обработка исключений при построении графика
         except Exception as e:
             messages.error(request, f"Ошибка при построении графика: {e}")
             return render(request, 'audit/graph.html', {
@@ -232,7 +226,6 @@ def graph(request):
                 'forecast_period': forecast_period
             })
 
-        # Построение столбчатой диаграммы с выбранным типом цен
         bar_trace = go.Bar(
             x=x_values,
             y=y_values,
@@ -241,7 +234,6 @@ def graph(request):
             width=0.5
         )
 
-        # Построение линии тренда на основе прогнозируемых данных
         trend_trace = go.Scatter(
             x=extended_x_values,
             y=extended_y_values,
@@ -250,10 +242,8 @@ def graph(request):
             line=dict(color='red', width=2)
         )
 
-        # Создаем объект графика с двумя слоями: столбцы и линия тренда
         fig = go.Figure(data=[bar_trace, trend_trace])
 
-        # Настройки графика: заголовок, метки осей, размер графика
         fig.update_layout(
             title=f'{price_type.capitalize()} цены по продукту "{product_name}" с прогнозом на {forecast_period} дней',
             xaxis_title='Дата загрузки',
@@ -265,31 +255,27 @@ def graph(request):
             margin=dict(l=20, r=20, t=50, b=20)
         )
 
-        # Преобразование графика в HTML-код для вставки на веб-страницу
         graph_div = fig.to_html(full_html=False)
 
-        # Возвращаем страницу с построенным графиком
+        # Подготовка данных для таблицы
+        table_data = list(zip(extended_x_values[-forecast_period:], extended_y_values[-forecast_period:]))
+
         return render(request, 'audit/graph.html', {
             'graph': graph_div,
             'products': get_all_products(),
             'product_input': product_name,
             'forecast_period': forecast_period,
-            'forecast_min': forecast_min,
-            'min_date': min_date,
-            'forecast_max': forecast_max,
-            'max_date': max_date,
+            'table_data': table_data,
             'trend_type': trend_type,
             'price_type': price_type
         })
 
-    # Если метод запроса не POST, просто возвращаем страницу с пустым графиком и дефолтными значениями
     return render(request, 'audit/graph.html', {
         'graph': '',
         'products': get_all_products(),
         'product_input': '',
         'forecast_period': 7
     })
-
 
 
 # Функция для получения всех уникальных продуктов в базе данных
