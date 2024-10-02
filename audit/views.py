@@ -176,6 +176,8 @@ def add_trend_and_forecast(x_values, y_values, forecast_days, trend_type):
     return extended_x_dates, extended_y_values, y_trend, forecast_min, min_date, forecast_max, max_date
 
 
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
 def graph(request):
     if request.method == 'POST':
         product_name = request.POST.get('product_input', '').strip()
@@ -265,7 +267,7 @@ def graph(request):
             'products': get_all_products(),
             'product_input': product_name,
             'forecast_period': forecast_period,
-            'table_data': table_data,
+            'table_data': table_data,  # Передаем все данные в шаблон
             'trend_type': trend_type,
             'price_type': price_type
         })
@@ -276,6 +278,7 @@ def graph(request):
         'product_input': '',
         'forecast_period': 7
     })
+
 
 
 # Функция для получения всех уникальных продуктов в базе данных

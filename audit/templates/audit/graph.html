@@ -100,6 +100,23 @@
             color: #666;
             font-size: 0.9em;
         }
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .pagination-controls button {
+            padding: 10px 20px;
+            background-color: #6528e0;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .pagination-controls button:hover {
+            background-color: #5220b0;
+        }
     </style>
 </head>
 <body>
@@ -150,7 +167,7 @@
                     <th>Цена</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="table-body">
                 {% for date, price in table_data %}
                     <tr>
                         <td>{{ date }}</td>
@@ -159,6 +176,12 @@
                 {% endfor %}
             </tbody>
         </table>
+
+        <div class="pagination-controls">
+            <button onclick="prevPage()">Предыдущая</button>
+            <span id="page-info">Страница 1</span>
+            <button onclick="nextPage()">Следующая</button>
+        </div>
     {% endif %}
 
     <a href="{% url 'audit:home' %}" class="return-button">Вернуться на главную</a>
@@ -166,5 +189,41 @@
 <footer>
     <p>&copy; 2024 Прогноз цен</p>
 </footer>
+
+<script>
+    const rowsPerPage = 5;
+    const rows = document.querySelectorAll('#table-body tr');
+    const totalRows = rows.length;
+    let currentPage = 1;
+    const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+    function displayRows() {
+        let start = (currentPage - 1) * rowsPerPage;
+        let end = start + rowsPerPage;
+
+        rows.forEach((row, index) => {
+            row.style.display = (index >= start && index < end) ? '' : 'none';
+        });
+
+        document.getElementById('page-info').innerText = `Страница ${currentPage} из ${totalPages}`;
+    }
+
+    function nextPage() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            displayRows();
+        }
+    }
+
+    function prevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            displayRows();
+        }
+    }
+
+    // Показать первую страницу при загрузке
+    displayRows();
+</script>
 </body>
 </html>
