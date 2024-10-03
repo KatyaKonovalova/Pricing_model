@@ -5,13 +5,11 @@ import plotly.graph_objs as go
 import plotly.graph_objects as go
 
 from datetime import datetime
-
 from audit.calculates import get_all_products, calculate_price, add_trend_and_forecast
 from audit.forms import AuditForm
 from audit.models import Data
 from django.shortcuts import render
 from django.contrib import messages
-
 from config import settings
 
 
