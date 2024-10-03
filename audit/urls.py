@@ -6,5 +6,5 @@ app_name = AuditConfig.name
 
 urlpatterns = [
     path("", home, name="home"),
-    path('graph/', graph, name='graph'),
+    path("graph/", graph, name="graph"),
 ]
